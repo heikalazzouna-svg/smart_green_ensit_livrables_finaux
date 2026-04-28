@@ -22,51 +22,57 @@ def run():
     # Get sources
     sources, _ = request_json(f"{BASE_URL}/data/emission-sources", headers=headers)
     elec = next(s for s in sources if "Electricity" in s["name"])
+    gas = next(s for s in sources if "Natural Gas" in s["name"])
     car = next(s for s in sources if "Car" in s["name"])
 
     # Get entity
     entities, _ = request_json(f"{BASE_URL}/data/entities", headers=headers)
     campus = next(e for e in entities if e["type"] == "CAMPUS")
 
-    # NEW bills
-    bills = [
-        {"start": "2025-05-01", "end": "2025-05-31", "qty": 16484, "note": "Facture STEG 05/2025"},
-        {"start": "2025-06-01", "end": "2025-06-30", "qty": 17676, "note": "Facture STEG 06/2025"},
-        {"start": "2025-07-01", "end": "2025-07-31", "qty": 27259, "note": "Facture STEG 07/2025"},
-        {"start": "2025-08-01", "end": "2025-08-31", "qty": 16397, "note": "Facture STEG 08/2025"},
-        {"start": "2025-09-01", "end": "2025-09-30", "qty": 36466, "note": "Facture STEG 09/2025"},
+    # Gas Bills (Thermies -> kWh conversion: * 1.163)
+    gas_bills = [
+        {"start": "2025-01-01", "end": "2025-01-31", "qty": int(29948 * 1.163), "note": "Facture Gaz 01/2025 (29948 Thermies)"},
+        {"start": "2025-02-01", "end": "2025-02-28", "qty": int(34300 * 1.163), "note": "Facture Gaz 02/2025 (34300 Thermies)"},
+        {"start": "2025-03-01", "end": "2025-03-31", "qty": 0, "note": "Facture Gaz 03/2025 (0 Thermies)"},
+        {"start": "2025-04-01", "end": "2025-04-30", "qty": 0, "note": "Facture Gaz 04/2025 (0 Thermies)"},
     ]
 
-    for bill in bills:
-        # Elec
+    for bill in gas_bills:
         request_json(f"{BASE_URL}/data/activity", method="POST", headers=headers, data={
-            "source_id": elec["id"],
+            "source_id": gas["id"],
             "entity_id": campus["id"],
             "period_start": bill["start"],
             "period_end": bill["end"],
             "quantity": bill["qty"],
-            "unit": elec["unit"],
+            "unit": gas["unit"],
             "data_quality": "MEASURED",
             "notes": bill["note"]
         })
 
-        # Mobility
-        # En été (juillet/aout), il y a moins d'étudiants, on va réduire la mobilité par 2 pour être réaliste,
-        # mais sinon on garde 297000.
-        mob_qty = 297000
-        if "07-" in bill["start"] or "08-" in bill["start"]:
-            mob_qty = 50000 # Vacances d'été
+    # Electricity Oct 2025
+    elec_oct = {"start": "2025-10-01", "end": "2025-10-31", "qty": 26522, "note": "Facture STEG 10/2025"}
+    request_json(f"{BASE_URL}/data/activity", method="POST", headers=headers, data={
+        "source_id": elec["id"],
+        "entity_id": campus["id"],
+        "period_start": elec_oct["start"],
+        "period_end": elec_oct["end"],
+        "quantity": elec_oct["qty"],
+        "unit": elec["unit"],
+        "data_quality": "MEASURED",
+        "notes": elec_oct["note"]
+    })
 
-        request_json(f"{BASE_URL}/data/activity", method="POST", headers=headers, data={
-            "source_id": car["id"],
-            "entity_id": campus["id"],
-            "period_start": bill["start"],
-            "period_end": bill["end"],
-            "quantity": mob_qty,
-            "unit": car["unit"],
-            "data_quality": "ESTIMATED",
-            "notes": "Mobilité (ajustée pour l'été)" if mob_qty == 50000 else "Mobilité (150 ens + 1270 etu + 65 admin)"
-        })
+    # Mobility Oct 2025
+    request_json(f"{BASE_URL}/data/activity", method="POST", headers=headers, data={
+        "source_id": car["id"],
+        "entity_id": campus["id"],
+        "period_start": elec_oct["start"],
+        "period_end": elec_oct["end"],
+        "quantity": 297000,
+        "unit": car["unit"],
+        "data_quality": "ESTIMATED",
+        "notes": "Mobilité (150 ens + 1270 etu + 65 admin)"
+    })
 
     print("Data inserted.")
     
