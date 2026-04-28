@@ -28,11 +28,13 @@ def run():
     entities, _ = request_json(f"{BASE_URL}/data/entities", headers=headers)
     campus = next(e for e in entities if e["type"] == "CAMPUS")
 
+    # NEW bills
     bills = [
-        {"start": "2025-01-01", "end": "2025-01-31", "qty": 17414, "note": "Facture STEG 01/2025"},
-        {"start": "2025-02-01", "end": "2025-02-28", "qty": 19206, "note": "Facture STEG 02/2025"},
-        {"start": "2025-03-01", "end": "2025-03-31", "qty": 15362, "note": "Facture STEG 03/2025"},
-        {"start": "2025-04-01", "end": "2025-04-30", "qty": 15513, "note": "Facture STEG 04/2025"},
+        {"start": "2025-05-01", "end": "2025-05-31", "qty": 16484, "note": "Facture STEG 05/2025"},
+        {"start": "2025-06-01", "end": "2025-06-30", "qty": 17676, "note": "Facture STEG 06/2025"},
+        {"start": "2025-07-01", "end": "2025-07-31", "qty": 27259, "note": "Facture STEG 07/2025"},
+        {"start": "2025-08-01", "end": "2025-08-31", "qty": 16397, "note": "Facture STEG 08/2025"},
+        {"start": "2025-09-01", "end": "2025-09-30", "qty": 36466, "note": "Facture STEG 09/2025"},
     ]
 
     for bill in bills:
@@ -49,15 +51,21 @@ def run():
         })
 
         # Mobility
+        # En été (juillet/aout), il y a moins d'étudiants, on va réduire la mobilité par 2 pour être réaliste,
+        # mais sinon on garde 297000.
+        mob_qty = 297000
+        if "07-" in bill["start"] or "08-" in bill["start"]:
+            mob_qty = 50000 # Vacances d'été
+
         request_json(f"{BASE_URL}/data/activity", method="POST", headers=headers, data={
             "source_id": car["id"],
             "entity_id": campus["id"],
             "period_start": bill["start"],
             "period_end": bill["end"],
-            "quantity": 297000,
+            "quantity": mob_qty,
             "unit": car["unit"],
             "data_quality": "ESTIMATED",
-            "notes": "Mobilité (150 ens + 1270 etu + 65 admin)"
+            "notes": "Mobilité (ajustée pour l'été)" if mob_qty == 50000 else "Mobilité (150 ens + 1270 etu + 65 admin)"
         })
 
     print("Data inserted.")
